@@ -1106,4 +1106,21 @@ export class Scraper {
 
     return allQuotes;
   }
+
+  /**
+   * Checks the IP address being used by the Scraper by making a request to an IP lookup service
+   * @returns The IP address as a string
+   */
+  public async getIpAddress(): Promise<string> {
+    const res = await requestApi<{ ip: string }>(
+      'https://api.ipify.org?format=json',
+      this.auth
+    );
+
+    if (!res.success) {
+      throw res.err;
+    }
+
+    return res.value.ip;
+  }
 }
