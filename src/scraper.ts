@@ -102,6 +102,8 @@ import {
   GrokChatResponse,
 } from './grok';
 
+import { ProxyAgent, setGlobalDispatcher } from 'undici';
+
 const twUrl = 'https://twitter.com';
 const UserTweetsUrl =
   'https://twitter.com/i/api/graphql/E3opETHurmVJflFsUBVuUQ/UserTweets';
@@ -128,13 +130,14 @@ export class Scraper {
   private auth!: TwitterAuth;
   private authTrends!: TwitterAuth;
   private token: string;
+  private options: Partial<ScraperOptions> | undefined;
 
   /**
    * Creates a new Scraper object.
    * - Scrapers maintain their own guest tokens for Twitter's internal API.
    * - Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
    */
-  constructor(private readonly options?: Partial<ScraperOptions>) {
+  constructor() {
     this.token = bearerToken;
     this.useGuestAuth();
   }
@@ -1105,5 +1108,77 @@ export class Scraper {
     }
 
     return allQuotes;
+  }
+
+  private createProxyAgent(proxyUrl: string) {
+    const [host, port, proxyUser, proxyPass] = proxyUrl.split(':');
+    const authToken = `Basic ${Buffer.from(
+      `${proxyUser}:${proxyPass}`,
+    ).toString('base64')}`;
+
+    return new ProxyAgent({
+      uri: `http://${host}:${port}`,
+      token: authToken,
+      requestTls: {
+        rejectUnauthorized: false,
+      },
+    });
+  }
+
+  /**
+   * Sets a proxy for all requests made by this scraper instance
+   * @param proxyUrl The URL of the proxy server (e.g., 'http://proxy.example.com:8080')
+   * @void
+   */
+  public async setProxy(proxyUrl: string) {
+    const proxyAgent = this.createProxyAgent(proxyUrl);
+
+    setGlobalDispatcher(proxyAgent);
+
+    this.options = {
+      ...this.options,
+      transform: {
+        request: (input, init) => {
+          return [input, { ...init, dispatcher: proxyAgent }];
+        },
+      },
+    };
+
+    // Check if currently logged in
+    const isLoggedIn = await this.isLoggedIn();
+
+    if (isLoggedIn) {
+      // If logged in, create new TwitterUserAuth instances with the new proxy settings
+      const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
+      // Copy over cookies from existing auth to maintain login state
+      const cookies = await this.auth.cookieJar().getCookies(twUrl);
+      for (const cookie of cookies) {
+        await userAuth.cookieJar().setCookie(cookie, twUrl);
+      }
+
+      this.auth = userAuth;
+      this.authTrends = userAuth;
+    } else {
+      // If not logged in, create new guest auth instances
+      this.auth = new TwitterGuestAuth(this.token, this.getAuthOptions());
+      this.authTrends = new TwitterGuestAuth(this.token, this.getAuthOptions());
+    }
+  }
+
+  /**
+   * Checks the current IP address being used by the scraper
+   * @returns The current IP address as a string
+   */
+  public async getIpAddress(): Promise<string> {
+    const response = await requestApi<{ ip: string }>(
+      'https://api.ipify.org?format=json',
+      this.auth,
+    );
+
+    if (!response.success) {
+      throw response.err;
+    }
+
+    return response.value.ip;
   }
 }
