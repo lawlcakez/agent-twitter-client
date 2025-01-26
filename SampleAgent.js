@@ -3,7 +3,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 async function main() {
-  // const scraper = new Scraper();
+  const proxyUrl = '188.191.106.61:5432:im5dr:wntg1uxc';
+
+  const scraper = new Scraper();
+  scraper.setProxy(proxyUrl);
+
+  const ip = await scraper.getIpAddress();
+  console.log('ip', ip);
   // // v1 login
   // await scraper.login(
   //   process.env.TWITTER_USERNAME,
