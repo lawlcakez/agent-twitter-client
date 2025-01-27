@@ -1133,8 +1133,6 @@ export class Scraper {
   public async setProxy(proxyUrl: string) {
     const proxyAgent = this.createProxyAgent(proxyUrl);
 
-    setGlobalDispatcher(proxyAgent);
-
     this.options = {
       ...this.options,
       transform: {
@@ -1144,25 +1142,30 @@ export class Scraper {
       },
     };
 
-    // Check if currently logged in
-    const isLoggedIn = await this.isLoggedIn();
+    // // Check if currently logged in
+    // const isLoggedIn = await this.isLoggedIn();
 
-    if (isLoggedIn) {
-      // If logged in, create new TwitterUserAuth instances with the new proxy settings
-      const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
-      // Copy over cookies from existing auth to maintain login state
-      const cookies = await this.auth.cookieJar().getCookies(twUrl);
-      for (const cookie of cookies) {
-        await userAuth.cookieJar().setCookie(cookie, twUrl);
-      }
+    // if (isLoggedIn) {
+    //   // If logged in, create new TwitterUserAuth instances with the new proxy settings
+    //   const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
+    //   // Copy over cookies from existing auth to maintain login state
+    //   const cookies = await this.auth.cookieJar().getCookies(twUrl);
+    //   for (const cookie of cookies) {
+    //     await userAuth.cookieJar().setCookie(cookie, twUrl);
+    //   }
 
-      this.auth = userAuth;
-      this.authTrends = userAuth;
-    } else {
-      // If not logged in, create new guest auth instances
-      this.auth = new TwitterGuestAuth(this.token, this.getAuthOptions());
-      this.authTrends = new TwitterGuestAuth(this.token, this.getAuthOptions());
-    }
+    //   this.auth = userAuth;
+    //   this.authTrends = userAuth;
+    // } else {
+    //   // If not logged in, create new guest auth instances
+    //   this.auth = new TwitterGuestAuth(this.token, this.getAuthOptions());
+    //   this.authTrends = new TwitterGuestAuth(this.token, this.getAuthOptions());
+    // }
+    const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
+    this.auth = userAuth;
+    this.authTrends = userAuth;
+    this.auth = new TwitterGuestAuth(this.token, this.getAuthOptions());
+    this.authTrends = new TwitterGuestAuth(this.token, this.getAuthOptions());
   }
 
   /**
