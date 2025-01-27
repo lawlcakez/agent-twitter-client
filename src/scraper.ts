@@ -1133,6 +1133,8 @@ export class Scraper {
   public async setProxy(proxyUrl: string) {
     const proxyAgent = this.createProxyAgent(proxyUrl);
 
+    setGlobalDispatcher(proxyAgent);
+
     this.options = {
       ...this.options,
       transform: {
