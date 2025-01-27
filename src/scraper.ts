@@ -130,14 +130,13 @@ export class Scraper {
   private auth!: TwitterAuth;
   private authTrends!: TwitterAuth;
   private token: string;
-  private options: Partial<ScraperOptions> | undefined;
 
   /**
    * Creates a new Scraper object.
    * - Scrapers maintain their own guest tokens for Twitter's internal API.
    * - Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
    */
-  constructor() {
+  constructor(private readonly options?: Partial<ScraperOptions>) {
     this.token = bearerToken;
     this.useGuestAuth();
   }
@@ -1110,65 +1109,54 @@ export class Scraper {
     return allQuotes;
   }
 
-  private createProxyAgent(proxyUrl: string) {
-    const [host, port, proxyUser, proxyPass] = proxyUrl.split(':');
-    const authToken = `Basic ${Buffer.from(
-      `${proxyUser}:${proxyPass}`,
-    ).toString('base64')}`;
+  // private createProxyAgent(proxyUrl: string) {
+  //   const [host, port, proxyUser, proxyPass] = proxyUrl.split(':');
+  //   const authToken = `Basic ${Buffer.from(
+  //     `${proxyUser}:${proxyPass}`,
+  //   ).toString('base64')}`;
 
-    return new ProxyAgent({
-      uri: `http://${host}:${port}`,
-      token: authToken,
-      requestTls: {
-        rejectUnauthorized: false,
-      },
-    });
-  }
+  //   return new ProxyAgent({
+  //     uri: `http://${host}:${port}`,
+  //     token: authToken,
+  //     requestTls: {
+  //       rejectUnauthorized: false,
+  //     },
+  //   });
+  // }
 
-  /**
-   * Sets a proxy for all requests made by this scraper instance
-   * @param proxyUrl The URL of the proxy server (e.g., 'http://proxy.example.com:8080')
-   * @void
-   */
-  public async setProxy(proxyUrl: string) {
-    const proxyAgent = this.createProxyAgent(proxyUrl);
+  // /**
+  //  * Sets a proxy for all requests made by this scraper instance
+  //  * @param proxyUrl The URL of the proxy server (e.g., 'http://proxy.example.com:8080')
+  //  * @void
+  //  */
+  // public async setProxy(proxyUrl: string) {
+  //   const proxyAgent = this.createProxyAgent(proxyUrl);
 
-    setGlobalDispatcher(proxyAgent);
+  //   // setGlobalDispatcher(proxyAgent);
+  //   // Preserve existing auth state
+  //   const wasLoggedIn = await this.isLoggedIn();
+  //   const cookies = await this.auth.cookieJar().getCookies(twUrl);
 
-    this.options = {
-      ...this.options,
-      transform: {
-        request: (input, init) => {
-          return [input, { ...init, dispatcher: proxyAgent }];
-        },
-      },
-    };
+  //   // Create new auth with proxy
+  //   const newAuth = wasLoggedIn
+  //     ? new TwitterUserAuth(this.token, this.getAuthOptions())
+  //     : new TwitterGuestAuth(this.token, this.getAuthOptions());
 
-    // // Check if currently logged in
-    // const isLoggedIn = await this.isLoggedIn();
+  //   this.options = {
+  //     ...this.options,
+  //     transform: {
+  //       request: (input, init) => [input, { ...init, dispatcher: proxyAgent }],
+  //     },
+  //   };
 
-    // if (isLoggedIn) {
-    //   // If logged in, create new TwitterUserAuth instances with the new proxy settings
-    //   const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
-    //   // Copy over cookies from existing auth to maintain login state
-    //   const cookies = await this.auth.cookieJar().getCookies(twUrl);
-    //   for (const cookie of cookies) {
-    //     await userAuth.cookieJar().setCookie(cookie, twUrl);
-    //   }
+  //   // Restore cookies
+  //   for (const cookie of cookies) {
+  //     await newAuth.cookieJar().setCookie(cookie, twUrl);
+  //   }
 
-    //   this.auth = userAuth;
-    //   this.authTrends = userAuth;
-    // } else {
-    //   // If not logged in, create new guest auth instances
-    //   this.auth = new TwitterGuestAuth(this.token, this.getAuthOptions());
-    //   this.authTrends = new TwitterGuestAuth(this.token, this.getAuthOptions());
-    // }
-    const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
-    this.auth = userAuth;
-    this.authTrends = userAuth;
-    this.auth = new TwitterGuestAuth(this.token, this.getAuthOptions());
-    this.authTrends = new TwitterGuestAuth(this.token, this.getAuthOptions());
-  }
+  //   this.auth = newAuth;
+  //   this.authTrends = newAuth;
+  // }
 
   /**
    * Checks the current IP address being used by the scraper
