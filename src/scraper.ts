@@ -139,6 +139,9 @@ export class Scraper {
   constructor(private readonly options?: Partial<ScraperOptions>) {
     this.token = bearerToken;
     this.useGuestAuth();
+
+    console.log("Scraper contructor options:", this.options);
+    console.log("Scraper auth:", this.auth);
   }
 
   /**
